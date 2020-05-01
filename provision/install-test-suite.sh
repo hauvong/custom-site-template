@@ -1,14 +1,14 @@
 install_test_suite() {
 
-	WP_TESTS=$(get_config_value 'wp_tests.provision' false | awk '{print tolower($0)}')
-	if [ "${WP_TESTS}" != "true" ]; then
-		WP_TESTS=$(get_config_value 'wp_tests' false | awk '{print tolower($0)}')
-		if [ "${WP_TESTS}" != "true" ]; then
-			return 0
-		fi
-	fi
+  WP_TESTS=$(get_config_value 'wp_tests.provision' false | awk '{print tolower($0)}')
+  if [ "${WP_TESTS}" != "true" ]; then
+    WP_TESTS=$(get_config_value 'wp_tests' false | awk '{print tolower($0)}')
+    if [ "${WP_TESTS}" != "true" ]; then
+      return 0
+    fi
+  fi
   WP_TESTS_VERSION=${WP_VERSION}
-	WP_TESTS_DATA=$(get_config_value 'wp_tests.data' false | awk '{print tolower($0)}')
+  WP_TESTS_DATA=$(get_config_value 'wp_tests.data' false | awk '{print tolower($0)}')
   WP_TESTS_DB_NAME=$(get_config_value 'wp_tests.db_name' "${DB_NAME}_tests")
   WP_TESTS_DIR=$(get_config_value 'wp_tests.dir' "${VVV_PATH_TO_SITE}/wp-tests")
   WP_TESTS_CONFIG="${WP_TESTS_DIR}/wp-tests-config.php"
@@ -29,7 +29,7 @@ install_test_suite() {
     if [[ ! -d ${WP_TESTS_DIR}/phpunit/includes ]]; then
       echo " * Installing Wordpress Tests ${WP_TESTS_VERSION} ${WP_TESTS_DIR}"
       noroot svn co --quiet https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/includes ${WP_TESTS_DIR}/phpunit/includes
-			if [[ "true" == "${WP_TESTS_DATA}" ]]; then
+      if [[ "true" == "${WP_TESTS_DATA}" ]]; then
         noroot svn co --quiet https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/data/ ${WP_TESTS_DIR}/phpunit/data
       fi
     else
