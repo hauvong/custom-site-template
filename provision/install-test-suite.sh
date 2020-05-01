@@ -11,7 +11,7 @@ install_test_suite() {
   WP_TESTS_DATA=$(get_config_value 'wp_tests.data' false | awk '{print tolower($0)}')
   WP_TESTS_DB_NAME=$(get_config_value 'wp_tests.db_name' "${DB_NAME}_tests")
   WP_TESTS_DIR=$(get_config_value 'wp_tests.dir' "${VVV_PATH_TO_SITE}/wp-tests")
-  WP_TESTS_CONFIG="${WP_TESTS_DIR}/wp-tests-config.php"
+  WP_TESTS_CONFIG="${WP_TESTS_DIR}/phpunit/wp-tests-config.php"
 
   if [[ "nightly" == "${VERSION}" || "trunk" == "${WP_TESTS_VERSION}" ]]; then
     WP_TESTS_TAG="trunk"
