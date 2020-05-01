@@ -15,6 +15,8 @@ DB_NAME=$(get_config_value 'db_name' "${VVV_SITE_NAME}")
 DB_NAME=${DB_NAME//[\\\/\.\<\>\:\"\'\|\?\!\*]/}
 DB_PREFIX=$(get_config_value 'db_prefix' 'wp_')
 
+WP_CORE_DIR="${VVV_PATH_TO_SITE}/public_html"
+
 # Make a database, if we don't already have one
 setup_database() {
   echo -e " * Creating database '${DB_NAME}' (if it's not already there)"
@@ -30,7 +32,7 @@ setup_nginx_folders() {
   noroot touch "${VVV_PATH_TO_SITE}/log/nginx-error.log"
   noroot touch "${VVV_PATH_TO_SITE}/log/nginx-access.log"
   echo " * Creating public_html folder if it doesn't exist already"
-  noroot mkdir -p "${VVV_PATH_TO_SITE}/public_html"
+  noroot mkdir -p "${WP_CORE_DIR}"
 }
 
 install_plugins() {
@@ -136,16 +138,16 @@ install_wp() {
   ADMIN_PASSWORD=$(get_config_value 'admin_password' "password")
   ADMIN_EMAIL=$(get_config_value 'admin_email' "admin@local.test")
 
-  echo " * Installing using wp core install --url=\"${DOMAIN}\" --title=\"${SITE_TITLE}\" --admin_name=\"${ADMIN_USER}\" --admin_email=\"${ADMIN_EMAIL}\" --admin_password=\"${ADMIN_PASSWORD}\" --path=\"${VVV_PATH_TO_SITE}/public_html\""
+  echo " * Installing using wp core install --url=\"${DOMAIN}\" --title=\"${SITE_TITLE}\" --admin_name=\"${ADMIN_USER}\" --admin_email=\"${ADMIN_EMAIL}\" --admin_password=\"${ADMIN_PASSWORD}\" --path=\"${WP_CORE_DIR}\""
   noroot wp core install --url="${DOMAIN}" --title="${SITE_TITLE}" --admin_name="${ADMIN_USER}" --admin_email="${ADMIN_EMAIL}" --admin_password="${ADMIN_PASSWORD}"
   echo " * WordPress was installed, with the username '${ADMIN_USER}', and the password '${ADMIN_PASSWORD}' at '${ADMIN_EMAIL}'"
 
   if [ "${WP_TYPE}" = "subdomain" ]; then
-    echo " * Running Multisite install using wp core multisite-install --subdomains --url=\"${DOMAIN}\" --title=\"${SITE_TITLE}\" --admin_name=\"${ADMIN_USER}\" --admin_email=\"${ADMIN_EMAIL}\" --admin_password=\"${ADMIN_PASSWORD}\" --path=\"${VVV_PATH_TO_SITE}/public_html\""
+    echo " * Running Multisite install using wp core multisite-install --subdomains --url=\"${DOMAIN}\" --title=\"${SITE_TITLE}\" --admin_name=\"${ADMIN_USER}\" --admin_email=\"${ADMIN_EMAIL}\" --admin_password=\"${ADMIN_PASSWORD}\" --path=\"${WP_CORE_DIR}\""
     noroot wp core multisite-install --subdomains --url="${DOMAIN}" --title="${SITE_TITLE}" --admin_name="${ADMIN_USER}" --admin_email="${ADMIN_EMAIL}" --admin_password="${ADMIN_PASSWORD}"
     echo " * Multisite install complete"
   elif [ "${WP_TYPE}" = "subdirectory" ]; then
-    echo " * Running Multisite install using wp core ${INSTALL_COMMAND} --url=\"${DOMAIN}\" --title=\"${SITE_TITLE}\" --admin_name=\"${ADMIN_USER}\" --admin_email=\"${ADMIN_EMAIL}\" --admin_password=\"${ADMIN_PASSWORD}\" --path=\"${VVV_PATH_TO_SITE}/public_html\""
+    echo " * Running Multisite install using wp core ${INSTALL_COMMAND} --url=\"${DOMAIN}\" --title=\"${SITE_TITLE}\" --admin_name=\"${ADMIN_USER}\" --admin_email=\"${ADMIN_EMAIL}\" --admin_password=\"${ADMIN_PASSWORD}\" --path=\"${WP_CORE_DIR}\""
     noroot wp core multisite-install --url="${DOMAIN}" --title="${SITE_TITLE}" --admin_name="${ADMIN_USER}" --admin_email="${ADMIN_EMAIL}" --admin_password="${ADMIN_PASSWORD}"
     echo " * Multisite install complete"
   fi
@@ -186,8 +188,7 @@ update_wp() {
 setup_database
 setup_nginx_folders
 
-cd "${VVV_PATH_TO_SITE}/public_html"
-
+cd "${WP_CORE_DIR}"
 
 
 if [ "${WP_TYPE}" == "none" ]; then
@@ -195,18 +196,18 @@ if [ "${WP_TYPE}" == "none" ]; then
 else
   echo " * Install type is '${WP_TYPE}'"
   # Install and configure the latest stable version of WordPress
-  if [[ ! -f "${VVV_PATH_TO_SITE}/public_html/wp-load.php" ]]; then
-    download_wordpress "${VVV_PATH_TO_SITE}/public_html" "${WP_VERSION}" "${WP_LOCALE}"
+  if [[ ! -f "${WP_CORE_DIR}/wp-load.php" ]]; then
+    download_wordpress "${WP_CORE_DIR}" "${WP_VERSION}" "${WP_LOCALE}"
   fi
 
-  if [[ ! -f "${VVV_PATH_TO_SITE}/public_html/wp-config.php" ]]; then
+  if [[ ! -f "${WP_CORE_DIR}/wp-config.php" ]]; then
     initial_wpconfig
   fi
 
   if ! $(noroot wp core is-installed ); then
     echo " * WordPress is present but isn't installed to the database, checking for SQL dumps in wp-content/database.sql or the main backup folder."
-    if [ -f "${VVV_PATH_TO_SITE}/public_html/wp-content/database.sql" ]; then
-      restore_db_backup "${VVV_PATH_TO_SITE}/public_html/wp-content/database.sql"
+    if [ -f "${WP_CORE_DIR}/wp-content/database.sql" ]; then
+      restore_db_backup "${WP_CORE_DIR}/wp-content/database.sql"
     elif [ -f "/srv/database/backups/${VVV_SITE_NAME}.sql" ]; then
       restore_db_backup "/srv/database/backups/${VVV_SITE_NAME}.sql"
     else
@@ -221,5 +222,10 @@ copy_nginx_configs
 setup_wp_config_constants
 install_plugins
 install_themes
+
+# Run additional install scripts
+if [[ -f "${VVV_PATH_TO_SITE}/provision/install-test-suite.sh" ]]; then
+	. <(cat ${VVV_PATH_TO_SITE}/provision/install-*.sh)
+fi
 
 echo " * Site Template provisioner script completed for ${VVV_SITE_NAME}"
