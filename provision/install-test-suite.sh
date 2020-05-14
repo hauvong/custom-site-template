@@ -40,7 +40,7 @@ install_test_suite() {
       fi
     fi
 
-    noroot svn --force export https://develop.svn.wordpress.org/${WP_TESTS_TAG}/wp-tests-config-sample.php ${WP_TESTS_DIR}/wp-tests-config.php
+    noroot svn --force export https://develop.svn.wordpress.org/${WP_TESTS_TAG}/wp-tests-config-sample.php ${WP_TESTS_CONFIG}
 
     sed \
       -e "s|dirname( __FILE__ ) . '/src/'|'${WP_CORE_DIR}/'|" \

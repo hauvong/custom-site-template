@@ -16,6 +16,9 @@ DB_NAME=${DB_NAME//[\\\/\.\<\>\:\"\'\|\?\!\*]/}
 DB_PREFIX=$(get_config_value 'db_prefix' 'wp_')
 
 WP_CORE_DIR="${VVV_PATH_TO_SITE}/public_html"
+WP_CONTENT_DIR="${WP_CORE_DIR}/wp-content"
+WP_PLUGINS_DIR="${WP_CONTENT_DIR}/plugins"
+WP_MU_PLUGINS_DIR="${WP_CONTENT_DIR}/mu-plugins"
 
 # Make a database, if we don't already have one
 setup_database() {
