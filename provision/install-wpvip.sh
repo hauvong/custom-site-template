@@ -9,6 +9,8 @@ function git_install {
     exit 1
   fi
 
+  echo "git install: ${SOURCE} ${TARGET}"
+
   if [ ! -d ${TARGET} ]
   then
     noroot mkdir -p ${TARGET}
@@ -21,15 +23,8 @@ function git_install {
 
     noroot git init
     noroot git remote add origin "${SOURCE}"
-    noroot git fetch
+    noroot git fetch origin master
     noroot git checkout origin/master -b master
-    noroot git submodule update --init --recursive
-
-  else
-
-    noroot git fetch --prune
-    noroot git checkout master
-    noroot git reset --hard origin/master
     noroot git submodule update --init --recursive
 
   fi
@@ -49,9 +44,14 @@ function svn_install {
     exit 1
   fi
 
-  if [ ! -d ${TARGET} ]
-  then
+  echo "svn install: ${SOURCE} ${TARGET}"
+
+  if [[ ! -d ${TARGET} ]]; then
     noroot mkdir -p ${TARGET}
+  fi
+
+  if [[ ! -d ${TARGET}/.git ]]; then
+    return
   fi
 
   local OLD_PATH="$(pwd)"
@@ -59,37 +59,63 @@ function svn_install {
 
   if [ ! -d ${TARGET}/.svn ]; then
     noroot svn checkout ${SOURCE} ${TARGET}
-  else
-    noroot svn cleanup ${TARGET}
-    noroot svn update ${TARGET}
   fi
 
   cd "${OLD_PATH}"
 
 }
 
-function maybe_install_vipclassic() {
-  WP_VIP=$(get_config_value 'wp_vip' false | awk '{print tolower($0)}')
-
-  if [[ ! "${WP_VIP}" =~ classic ]]; then
-    return 0
-  fi
+function install_vipclassic() {
 
   git_install "${WP_MU_PLUGINS_DIR}" "https://github.com/automattic/vip-wpcom-mu-plugins.git"
   svn_install "${WP_CONTENT_DIR}/themes/vip/plugins" "https://vip-svn.wordpress.com/plugins/"
 
-}
-
-function maybe_install_vipgo() {
-  WP_VIP=$(get_config_value 'wp_vip' false | awk '{print tolower($0)}')
-
-  if [[ ! "${WP_VIP}" =~ go ]]; then
-    return 0
+  if [[ ! -f ${WP_MU_PLUGINS_DIR}/amp-wp/vendor/autoload.php ]]; then
+    git -C ${WP_MU_PLUGINS_DIR} submodule deinit -f amp-wp
+    rm -rf ${WP_MU_PLUGINS_DIR}/amp-wp
+    curl -o /tmp/amp-wp.zip https://downloads.wordpress.org/plugin/amp.1.5.3.zip
+    unzip /tmp/amp-wp.zip -d ${WP_MU_PLUGINS_DIR}/
+    mv ${WP_MU_PLUGINS_DIR}/amp ${WP_MU_PLUGINS_DIR}/amp-wp
   fi
 
+}
+
+function install_vipgo() {
   git_install "${WP_MU_PLUGINS_DIR}" "https://github.com/automattic/vip-go-mu-plugins-built.git"
+}
+
+function maybe_install_plugins() {
+  local REPO=$(get_config_value 'wp_plugins.repo')
+  if [[ -z "${REPO}" ]]; then
+    return
+  fi
+  git_install "${WP_PLUGINS_DIR}" "${REPO}"
+}
+
+function maybe_install_themes() {
+  local WP_THEMES=$(get_config_value 'wp_themes')
+  local REPO
+  if [[ -z "${WP_THEMES}" ]]; then
+    return
+  fi
+
+  echo "${WP_THEMES}" | shyaml keys-0 |
+    while IFS='' read -r -d $'\0' theme; do
+      REPO=$(get_config_value "wp_themes.${theme}.repo")
+      if [[ -z "${REPO}" ]]; then
+        continue;
+      fi
+      git_install "${WP_CONTENT_DIR}/themes/${theme}" "${REPO}"
+    done
 
 }
 
-maybe_install_vipclassic
-maybe_install_vipgo
+maybe_install_themes
+maybe_install_plugins
+
+WP_VIP=$(get_config_value 'wp_vip' false | awk '{print tolower($0)}')
+if [[ ! "${WP_VIP}" =~ classic ]]; then
+  install_vipclassic
+elif [[ ! "${WP_VIP}" =~ go ]]; then
+  install_vipgo
+fi
