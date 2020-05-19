@@ -70,12 +70,10 @@ function install_vipclassic() {
   git_install "${WP_MU_PLUGINS_DIR}" "https://github.com/automattic/vip-wpcom-mu-plugins.git"
   svn_install "${WP_CONTENT_DIR}/themes/vip/plugins" "https://vip-svn.wordpress.com/plugins/"
 
-  if [[ ! -f ${WP_MU_PLUGINS_DIR}/amp-wp/vendor/autoload.php ]]; then
-    git -C ${WP_MU_PLUGINS_DIR} submodule deinit -f amp-wp
-    rm -rf ${WP_MU_PLUGINS_DIR}/amp-wp
-    curl -o /tmp/amp-wp.zip https://downloads.wordpress.org/plugin/amp.1.5.3.zip
-    unzip /tmp/amp-wp.zip -d ${WP_MU_PLUGINS_DIR}/
-    mv ${WP_MU_PLUGINS_DIR}/amp ${WP_MU_PLUGINS_DIR}/amp-wp
+  if [[ ! -f ${WP_MU_PLUGINS_DIR}/amp-wp/vendor/autoload.php && -d ${WP_MU_PLUGINS_DIR}/amp-wp ]]; then
+    pushd ${WP_MU_PLUGINS_DIR}/amp-wp
+    composer install
+    popd
   fi
 
 }
